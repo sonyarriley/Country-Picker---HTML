@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Country of the Week</title>
+    <style>
+        body {
+            font-family: "Comic Sans MS", "Trebuchet MS", "Verdana", system-ui, sans-serif;
+            max-width: 780px;
+            margin: 30px auto;
+            padding: 0 16px;
+            background: #faf7ff;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        select {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 2px solid #ddd;
+            background: white;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 2px solid #ddd;
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .primary {
+            border-color: #c9a7ff;
+            background: #efe6ff;
+            font-weight: 700;
+        }
+
+        .secondary {
+            padding: 6px 10px;
+            font-size: 13px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            opacity: 0.75;
+        }
+
+        .secondary:hover {
+            opacity: 1;
+        }
+
+        .secondaryInput {
+            padding: 6px 10px;
+            font-size: 13px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            background: #fafafa;
+            opacity: 0.85;
+            width: 280px;
+            max-width: 100%;
+        }
+
+        .card {
+            border: 2px solid #e7ddff;
+            border-radius: 18px;
+            padding: 16px;
+            margin-top: 16px;
+            background: white;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .big {
+            font-size: 34px;
+            font-weight: 800;
+            margin: 10px 0 6px;
+            line-height: 1.1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 2px solid #ddd;
+            background: #fff7d6;
+            font-weight: 700;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .note {
+            margin-top: 8px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .tiny {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .progressWrap {
+            margin-top: 6px;
+        }
+
+        .progressBar {
+            height: 12px;
+            width: 100%;
+            border-radius: 999px;
+            background: #f0f0f0;
+            border: 2px solid #ddd;
+            overflow: hidden;
+        }
+
+        .progressFill {
+            height: 100%;
+            width: 0%;
+            background: #c9a7ff;
+        }
+
+        ul {
+            padding-left: 18px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>🌍 Country of the Week</h1>
+    <div class="controls">
+        <label style="display:inline-flex; gap:10px; align-items:center; font-weight:700;">
+            🌈 Pick from:
+            <select id="regionSelect">
+                <option value="ANY">🌍 Anywhere (random)</option>
+                <option value="Africa">🦁 Africa</option>
+                <option value="Asia">🐼 Asia</option>
+                <option value="Europe">🏰 Europe</option>
+                <option value="NorthAmerica">🗽 North America</option>
+                <option value="SouthAmerica">🦙 South America</option>
+                <option value="Oceania">🐠 Oceania</option>
+            </select>
+        </label>
+
+        <button id="pickBtn" class="primary">🎲 Pick!</button>
+        <button id="confirmBtn">✅ Confirm</button>
+        <button id="undoBtn">↩️ Undo</button>
+
+    </div>
+    <div style="margin-top: 6px;">
+        <button id="resetBtn" class="secondary" title="Resets the pool so countries can appear again.">🔄 Reset</button>
+        <button id="exportBtn" class="secondary">⬇️ Export</button>
+    </div>
+
+    <div style="margin-top: 8px;">
+        <input id="addCountryInput" class="secondaryInput" list="countryList" placeholder="Add completed country..." />
+        <datalist id="countryList"></datalist>
+
+        <button id="addCountryBtn" class="secondary">➕ Add</button>
+    </div>
+
+
+    <div class="note">
+        ✨ Countries won’t repeat until you press <strong>Reset</strong>.
+    </div>
+
+    <div class="card">
+        <div style="font-weight: 800;">⭐ This week’s country:</div>
+        <div id="current" class="big">—</div>
+        <div id="previewNote" class="tiny"></div>
+        <div id="currentRegion" class="badge" style="display:none;"></div>
+
+        <div class="progressWrap">
+            <div class="tiny"><strong>Total progress:</strong> <span id="totalProgressText">0/197</span></div>
+            <div class="progressBar" aria-label="Total progress bar">
+                <div id="totalProgressFill" class="progressFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="font-weight: 700;">History (grouped by region)</div>
+        <div id="historyByRegion"></div>
+    </div>
+
+
+    <script>
+        /* =========================
+           1) DATA / CONSTANTS
+        ========================= */
+
+        const countriesByRegion = {
+            Africa: [
+                "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde",
+                "Cameroon", "Central African Republic", "Chad", "Comoros", "Democratic Republic of the Congo",
+                "Republic of the Congo", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea",
+                "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
+                "Ivory Coast", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi",
+                "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger",
+                "Nigeria", "Rwanda", "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone",
+                "Somalia", "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia",
+                "Uganda", "Zambia", "Zimbabwe"
+            ],
+
+            Asia: [
+                "Afghanistan", "Armenia", "Azerbaijan", "Bahrain", "Bangladesh", "Bhutan", "Brunei",
+                "Cambodia", "China", "Cyprus", "Georgia", "India", "Indonesia", "Iran", "Iraq",
+                "Israel", "Japan", "Jordan", "Kazakhstan", "Kuwait", "Kyrgyzstan", "Laos",
+                "Lebanon", "Malaysia", "Maldives", "Mongolia", "Myanmar", "Nepal", "North Korea",
+                "Oman", "Pakistan", "Palestine", "Philippines", "Qatar", "Saudi Arabia",
+                "Singapore", "South Korea", "Sri Lanka", "Syria", "Taiwan", "Tajikistan",
+                "Thailand", "Timor-Leste", "Turkey", "Turkmenistan", "United Arab Emirates",
+                "Uzbekistan", "Vietnam", "Yemen"
+            ],
+
+            Europe: [
+                "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina",
+                "Bulgaria", "Croatia", "Czech Republic", "Denmark", "Estonia", "Finland",
+                "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy",
+                "Kosovo", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta",
+                "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia", "Norway",
+                "Poland", "Portugal", "Romania", "Russia", "San Marino", "Serbia",
+                "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Ukraine",
+                "United Kingdom", "Vatican City"
+            ],
+
+            NorthAmerica: [
+                "Antigua and Barbuda", "Bahamas", "Barbados", "Belize", "Canada", "Costa Rica",
+                "Cuba", "Dominica", "Dominican Republic", "El Salvador", "Grenada", "Guatemala",
+                "Haiti", "Honduras", "Jamaica", "Mexico", "Nicaragua", "Panama",
+                "Saint Kitts and Nevis", "Saint Lucia",
+                "Saint Vincent and the Grenadines", "Trinidad and Tobago",
+                "United States"
+            ],
+
+            SouthAmerica: [
+                "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+                "Guyana", "Paraguay", "Peru", "Suriname", "Uruguay", "Venezuela"
+            ],
+
+            Oceania: [
+                "Australia", "Fiji", "Kiribati", "Marshall Islands", "Micronesia",
+                "Nauru", "New Zealand", "Palau", "Papua New Guinea", "Samoa",
+                "Solomon Islands", "Tonga", "Tuvalu", "Vanuatu"
+            ]
+        };
+
+        const allCountries = Object.values(countriesByRegion).flat();
+
+        const totalsByRegion = Object.fromEntries(
+            Object.entries(countriesByRegion).map(([region, list]) => [region, list.length])
+        );
+
+        const STORAGE_KEY = "countryPicker_v1";
+        const TOTAL_WORLD = 197;
+
+        const REGION_NAMES = {
+            Africa: "🦁 Africa",
+            Asia: "🐼 Asia",
+            Europe: "🏰 Europe",
+            NorthAmerica: "🗽 North America",
+            SouthAmerica: "🦙 South America",
+            Oceania: "🐠 Oceania",
+            Unknown: "❓ Unknown"
+        };
+
+        const REGION_LABELS = {
+            Africa: "Africa",
+            Asia: "Asia",
+            Europe: "Europe",
+            NorthAmerica: "North America",
+            SouthAmerica: "South America",
+            Oceania: "Oceania",
+            Unknown: "Unknown"
+        };
+
+        /* =========================
+           2) STATE
+        ========================= */
+
+        let pickedHistory = []; // each entry: { country, region }
+        let candidate = null;   // { country, region } or null
+        let remainingByRegion = {};
+        let remainingAll = [];
+
+
+        /* =========================
+           3) DOM ELEMENTS
+        ========================= */
+        const els = {
+            current: document.getElementById("current"),
+            previewNote: document.getElementById("previewNote"),
+            regionSelect: document.getElementById("regionSelect"),
+            historyByRegion: document.getElementById("historyByRegion"),
+            currentRegion: document.getElementById("currentRegion"),
+            totalProgressText: document.getElementById("totalProgressText"),
+            totalProgressFill: document.getElementById("totalProgressFill"),
+            confirmBtn: document.getElementById("confirmBtn"),
+            undoBtn: document.getElementById("undoBtn"),
+            addCountryInput: document.getElementById("addCountryInput"),
+            addCountryBtn: document.getElementById("addCountryBtn")
+        };
+
+        /* =========================
+           4) CORE HELPERS
+        ========================= */
+
+        function resetPools() {
+            remainingByRegion = Object.fromEntries(
+                Object.entries(countriesByRegion).map(([region, list]) => [region, [...list]])
+            );
+            remainingAll = [...allCountries];
+        }
+
+        function regionOfCountry(country) {
+            for (const [region, list] of Object.entries(countriesByRegion)) {
+                if (list.includes(country)) return region;
+            }
+            return "Unknown";
+        }
+
+        function normalize(s) {
+            return s.trim().toLowerCase();
+        }
+
+
+        /* =========================
+           5) PERSISTENCE
+        ========================= */
+
+        function saveState() {
+            const data = {
+                pickedHistory,
+                remainingByRegion,
+                candidate,
+                remainingAll,
+                selectedRegion: els.regionSelect.value
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadState() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+
+            try {
+                const data = JSON.parse(raw);
+
+                if (Array.isArray(data.pickedHistory)) pickedHistory = data.pickedHistory;
+                if (data.remainingByRegion && typeof data.remainingByRegion === "object") remainingByRegion = data.remainingByRegion;
+                if (Array.isArray(data.remainingAll)) remainingAll = data.remainingAll;
+                if (data.candidate && typeof data.candidate === "object") candidate = data.candidate;
+                if (typeof data.selectedRegion === "string") els.regionSelect.value = data.selectedRegion;
+
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function clearSavedState() {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+
+
+        /* =========================
+           6) UI UTILITIES
+        ========================= */
+
+        function populateCountryDatalist() {
+            const datalist = document.getElementById("countryList");
+            datalist.innerHTML = "";
+
+            remainingAll
+                .slice()
+                .sort()
+                .forEach(country => {
+                    const option = document.createElement("option");
+                    option.value = country;
+                    datalist.appendChild(option);
+                });
+        }
+
+        function playPickSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+
+                function tone(freq, startOffset, duration, volume) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = "triangle";
+                    osc.frequency.value = freq;
+
+                    gain.gain.setValueAtTime(0, now + startOffset);
+                    gain.gain.linearRampToValueAtTime(volume, now + startOffset + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(now + startOffset);
+                    osc.stop(now + startOffset + duration);
+                }
+
+                tone(523.25, 0.00, 0.25, 0.08);
+                tone(659.25, 0.05, 0.25, 0.07);
+                tone(783.99, 0.10, 0.30, 0.06);
+                tone(1046.5, 0.18, 0.35, 0.05);
+
+            } catch {
+                // silently ignore if blocked
+            }
+        }
+
+
+        /* =========================
+           7) STATE MUTATIONS (ACTIONS)
+        ========================= */
+
+        function pickCountry() {
+            const selectedRegion = els.regionSelect.value;
+
+            function pickFrom(list) {
+                const idx = Math.floor(Math.random() * list.length);
+                return list[idx];
+            }
+
+            if (selectedRegion === "ANY") {
+                if (remainingAll.length === 0) {
+                    alert("No countries left — hit Reset to start over.");
+                    return;
+                }
+                const country = pickFrom(remainingAll);
+                candidate = { country, region: regionOfCountry(country) };
+                render();
+                return;
+            }
+
+            const pool = remainingByRegion[selectedRegion];
+            if (pool.length === 0) {
+                alert(`No countries left in ${selectedRegion} — choose another region or Reset.`);
+                return;
+            }
+
+            const country = pickFrom(pool);
+            candidate = { country, region: selectedRegion };
+            render();
+        }
+
+        function confirmCandidate() {
+            if (!candidate) return;
+
+            const { country, region } = candidate;
+
+            const i = remainingAll.indexOf(country);
+            if (i >= 0) remainingAll.splice(i, 1);
+
+            const regionPool = remainingByRegion[region];
+            const j = regionPool ? regionPool.indexOf(country) : -1;
+            if (j >= 0) regionPool.splice(j, 1);
+
+            pickedHistory.unshift({ country, region });
+            candidate = null;
+
+            saveState();
+            playPickSound();
+            populateCountryDatalist();
+            render();
+        }
+
+        function undoLastConfirm() {
+            if (!pickedHistory.length) return;
+
+            const last = pickedHistory.shift();
+
+            remainingAll.push(last.country);
+
+            if (!remainingByRegion[last.region]) remainingByRegion[last.region] = [];
+            remainingByRegion[last.region].push(last.country);
+
+            remainingAll.sort();
+            remainingByRegion[last.region].sort();
+
+            saveState();
+            populateCountryDatalist();
+            render();
+        }
+
+        function addCompletedCountry() {
+            const raw = els.addCountryInput.value;
+            const typed = normalize(raw);
+
+            if (!typed) return;
+
+            const match = allCountries.find(c => normalize(c) === typed);
+
+            if (!match) {
+                alert("I couldn't find that country name. Try the exact spelling used in the list.");
+                return;
+            }
+
+            const already = pickedHistory.some(x => normalize(x.country) === normalize(match));
+            if (already) {
+                alert(`${match} is already in history.`);
+                els.addCountryInput.value = "";
+                return;
+            }
+
+            const region = regionOfCountry(match);
+
+            const i = remainingAll.indexOf(match);
+            if (i >= 0) remainingAll.splice(i, 1);
+
+            const pool = remainingByRegion[region];
+            if (pool) {
+                const j = pool.indexOf(match);
+                if (j >= 0) pool.splice(j, 1);
+            }
+
+            pickedHistory.unshift({ country: match, region });
+
+            if (candidate && normalize(candidate.country) === normalize(match)) candidate = null;
+
+            saveState();
+            populateCountryDatalist();
+            render();
+            els.addCountryInput.value = "";
+        }
+
+        function resetAll() {
+            candidate = null;
+            pickedHistory = [];
+            resetPools();
+            clearSavedState();
+            populateCountryDatalist();
+            render();
+        }
+
+        function exportHistoryCSV() {
+            if (!pickedHistory.length) {
+                alert("No history to export yet.");
+                return;
+            }
+
+            const exportedAt = new Date().toISOString();
+
+            const rows = [
+                ["exported_at_iso", "pick_order", "country", "region"]
+            ];
+
+            const chronological = [...pickedHistory].reverse();
+
+            chronological.forEach((item, idx) => {
+                rows.push([exportedAt, String(idx + 1), item.country, item.region]);
+            });
+
+            const csv = rows
+                .map(cols =>
+                    cols.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")
+                )
+                .join("\n");
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+
+            const date = new Date().toISOString().slice(0, 10);
+            a.download = `country-history-${date}.csv`;
+
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            URL.revokeObjectURL(url);
+        }
+
+
+        /* =========================
+           8) RENDERING
+        ========================= */
+
+        function render() {
+            // Current pick / preview
+            const shown = candidate ?? (pickedHistory.length ? pickedHistory[0] : null);
+
+            if (shown) {
+                els.current.textContent = shown.country;
+
+                els.currentRegion.style.display = "inline-block";
+                els.currentRegion.textContent = REGION_NAMES[shown.region] || REGION_NAMES.Unknown;
+
+            } else {
+                els.current.textContent = "—";
+                els.currentRegion.style.display = "none";
+            }
+
+            // Buttons enable/disable
+            els.confirmBtn.disabled = !candidate;
+            els.undoBtn.disabled = pickedHistory.length === 0;
+
+            if (els.previewNote) {
+                els.previewNote.textContent = candidate ? "Preview — press Confirm to lock it in ✅" : "";
+            }
+
+            // Total progress (unique countries picked)
+            const unique = new Set(pickedHistory.map(x => x.country));
+            const totalPicked = unique.size;
+
+            els.totalProgressText.textContent = `${totalPicked}/${TOTAL_WORLD}`;
+            els.totalProgressFill.style.width = `${Math.min(100, (totalPicked / TOTAL_WORLD) * 100)}%`;
+
+
+            // Build grouped history
+            const grouped = {};
+            for (const [region] of Object.entries(countriesByRegion)) grouped[region] = [];
+            grouped["Unknown"] = [];
+
+            for (const item of pickedHistory) {
+                (grouped[item.region] ?? grouped["Unknown"]).push(item.country);
+            }
+
+            els.historyByRegion.innerHTML = Object.keys(REGION_LABELS)
+                .filter(r => grouped[r] && grouped[r].length > 0)
+                .map(region => {
+                    const items = grouped[region].map(c => `<li>${c}</li>`).join("");
+
+                    const total = totalsByRegion[region] ?? grouped[region].length;
+                    const count = grouped[region].length;
+
+                    return `
+        <div style="margin-top: 10px;">
+          <div style="font-weight:700; margin-bottom:6px;">
+            ${REGION_LABELS[region]} (${count}/${total})
+          </div>
+          <ul style="margin-top:0;">${items}</ul>
+        </div>
+      `;
+                })
+                .join("") || "<div style='opacity:0.7;'>No picks yet.</div>";
+        }
+
+
+        /* =========================
+           9) EVENT WIRING + INIT
+        ========================= */
+
+        // Buttons
+        document.getElementById("pickBtn").addEventListener("click", pickCountry);
+
+        document.getElementById("resetBtn").addEventListener("click", () => {
+            const msg =
+                "Reset everything?\n\n" +
+                "- Countries can repeat again\n" +
+                "- History will be cleared\n\n" +
+                "Tip: Export first if you want a record.";
+            if (confirm(msg)) resetAll();
+        });
+
+        document.getElementById("exportBtn").addEventListener("click", exportHistoryCSV);
+
+        els.confirmBtn.addEventListener("click", confirmCandidate);
+        els.undoBtn.addEventListener("click", undoLastConfirm);
+
+        els.addCountryBtn.addEventListener("click", addCompletedCountry);
+        els.addCountryInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") addCompletedCountry();
+        });
+
+        // Save selection
+        els.regionSelect.addEventListener("change", saveState);
+
+        // Init
+        resetPools();
+        const loaded = loadState();
+        if (!loaded) saveState();
+        render();
+        populateCountryDatalist();
+    </script>
